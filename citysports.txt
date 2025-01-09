@@ -1,0 +1,7 @@
+write on       ffeeddccbbaa99887766554433221101
+a10500a4     - start
+a1030101a2   - value
+a10102010ba8 - value
+a10102010caf - value
+a10102010ba8 - value
+a1030105a6   - stop
