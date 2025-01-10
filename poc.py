@@ -24,7 +24,7 @@ _distance = 0
 speed = 0
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(name=__name__)
-
+queue = []
 
 
 def getIntValue(bArr, i, i2):
@@ -56,12 +56,19 @@ def getIntValue(bArr, i, i2):
         return i3/2560
 
 async def notify_(address,  debug=True):
+    global queue
     result = ""
     start = time.time()
-
-    async with BleakClient(address, timeout  = 60) as client:
-
-        await client.start_notify("ffeeddcc-bbaa-9988-7766-554433221102", notification_handler)
+    async with BleakClient(address, timeout  = 10) as client:
+        await client.start_notify("ffeeddcc-bbaa-9988-7766-554433221102", notification_handler) 
+        #start treadmill
+        #await client.write_gatt_char("ffeeddcc-bbaa-9988-7766-554433221101",  bytearray(b'\xa1\x03\x01\x01\xa2'), response=False)
+        #stop treadmill
+        #await client.write_gatt_char("ffeeddcc-bbaa-9988-7766-554433221101",  bytearray(b'\xa1\x03\x01\x05\xa6'), response=False)
+        if len(queue) > 0:
+            logger.info(queue)
+            await client.write_gatt_char("ffeeddcc-bbaa-9988-7766-554433221101",  bytearray(queue[0]), response=False)
+            queue = queue[1:]
         await asyncio.Future()
         #await client.stop_notify("ffeeddcc-bbaa-9988-7766-554433221102")
     return result
@@ -73,7 +80,7 @@ def read_request(characteristic: BlessGATTCharacteristic, **kwargs) -> bytearray
 
 def write_request(characteristic: BlessGATTCharacteristic, value: Any, **kwargs):
     characteristic.value = value
-    logger.debug(f"Char value set to {characteristic.value}")
+    logger.debug(f"Char {characteristic.uuid} value set to {characteristic.value}")
     if characteristic.value == b"\x0f":
         logger.debug("Nice")
         trigger.set()
@@ -89,7 +96,7 @@ def notification_handler(characteristic: BleakGATTCharacteristic, data: bytearra
         _start = time.time() - start
         distance = speed * 0.2777777777778 * _start
         _distance = distance + _distance
-        logger.debug("%s,    speed: %s, distance: %s (total %s)",datetime.datetime.now().strftime("%Y-%m-%YT%H:%M:%S.%fZ"), speed, distance, _distance)
+        logger.info("%s,    speed: %s, distance: %s (total %s)",datetime.datetime.now().strftime("%Y-%m-%YT%H:%M:%S.%fZ"), speed, distance, _distance)
         start = time.time()
 
 async def run(loop):
@@ -159,11 +166,12 @@ async def run(loop):
     while (True):
         global speed
         send = ( b'\x84\x24\xaa\xaa\x00\x00\x00\x00\x00\x00\x00\x00\x0B\x00\x00\x00\x00' )
-        logger.info("[%s] Updating speed %s",datetime.datetime.now().strftime("%Y-%m-%YT%H:%M:%S.%fZ"),speed)
+        logger.info("[%s] Updating app : speed %s",datetime.datetime.now().strftime("%Y-%m-%YT%H:%M:%S.%fZ"),speed)
         _speed = struct.pack('<h',int(speed*100))
         send=send.replace(b"\xaa\xaa", _speed)
         server.get_characteristic(bc.cTreadmillDataUUID).value =  bytearray (send)  
         server.update_value(     bc.sFitnessMachineUUID, bc.cTreadmillDataUUID    )
+        #queue.append([bc.cFitnessMachineControlPointUUID, response])    
         await asyncio.sleep(1)
     await server.stop()
 
