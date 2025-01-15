@@ -85,22 +85,29 @@ def createCommand(speed):
             speedup= CitySports_codes['changeSpeed']+("%0.2X" % int(speed*10)).lower()
             speedup= speedup + check_xor(speedup)
             return speedup
-    finally:
+    except:
         return None
 
 async def notify_(address,  debug=True):
     global queue
     result = ""
     start = time.time()
+    queue.append([5, createCommand("start")])
+    queue.append([8, createCommand(4)])
+    queue.append([20, createCommand("stop")])
+    _time = 0
     async with BleakClient(address, timeout  = 10) as client:
         await client.start_notify("ffeeddcc-bbaa-9988-7766-554433221102", notification_handler) 
-        queue.append(createCommand("start"))
-        queue.append(createCommand(1.2))
-        if len(queue) > 0:
-            logger.info(queue)
-            await client.write_gatt_char("ffeeddcc-bbaa-9988-7766-554433221101",  bytearray(queue[0]), response=False)
-            queue = queue[1:]
-        await asyncio.Future()
+        while (True):
+            if len(queue) > 0:
+                if (_time >= queue[0][0]):
+                    logger.info(bytes.fromhex(queue[0][1]))
+                    await client.write_gatt_char("ffeeddcc-bbaa-9988-7766-554433221101",  bytearray(bytes.fromhex(queue[0][1])), response=False)
+                    queue = queue[1:]
+            logger.info('.')
+            _time += 1
+            await asyncio.sleep(1)
+        #await asyncio.Future()
         #await client.stop_notify("ffeeddcc-bbaa-9988-7766-554433221102")
     return result
 
@@ -112,9 +119,6 @@ def read_request(characteristic: BlessGATTCharacteristic, **kwargs) -> bytearray
 def write_request(characteristic: BlessGATTCharacteristic, value: Any, **kwargs):
     characteristic.value = value
     logger.debug(f"Char {characteristic.uuid} value set to {characteristic.value}")
-    if characteristic.value == b"\x0f":
-        logger.debug("Nice")
-        trigger.set()
 
 def notification_handler(characteristic: BleakGATTCharacteristic, data: bytearray):
     """Simple notification handler which prints the data received."""
