@@ -26,7 +26,29 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(name=__name__)
 queue = []
 
-
+CitySports_codes = {
+  "stop":        'a1030105',
+  "start":       'a1030101',
+  "pause":       'a1030101',
+  "changeSpeed": 'a1010201',
+  "changeIncli": 'a1020202',
+}
+def check_xor(s):
+    i = 0
+    i2 = 0
+    while i < len(s):
+        i3 = i + 2
+        i2 ^= int(s[i:i3], 16)
+        i = i3
+    return int_to_hex_str(i2)
+    
+def int_to_hex_str(i):
+    hex_string = hex(i)[2:]  # Convert to hex and remove '0x' prefix
+    str_hex = hex_string
+    if len(hex_string) % 2 != 0:
+        str_hex = "0" + hex_string
+    return str_hex.upper()
+    
 def getIntValue(bArr, i, i2):
         i3 = 0
         if (bArr is not None):
@@ -165,13 +187,13 @@ async def run(loop):
     #84-24-FA-00-00-00-00-00-00-00-00-00-00-00-00-00-00
     while (True):
         global speed
-        send = ( b'\x84\x24\xaa\xaa\x00\x00\x00\x00\x00\x00\x00\x00\x0B\x00\x00\x00\x00' )
+        #send = ( b'\x84\x24\xaa\xaa\x00\x00\x00\x00\x00\x00\x00\x00\x0B\x00\x00\x00\x00' )
+        send  =  struct.pack ("<" + "H" * 8 + "?", 9348,int(speed*100),0,0,0,0,0,0,0)
         logger.info("[%s] Updating app : speed %s",datetime.datetime.now().strftime("%Y-%m-%YT%H:%M:%S.%fZ"),speed)
-        _speed = struct.pack('<h',int(speed*100))
-        send=send.replace(b"\xaa\xaa", _speed)
+        #_speed = struct.pack('<h',int(speed*100))
+        #send=send.replace(b"\xaa\xaa", _speed)
         server.get_characteristic(bc.cTreadmillDataUUID).value =  bytearray (send)  
-        server.update_value(     bc.sFitnessMachineUUID, bc.cTreadmillDataUUID    )
-        #queue.append([bc.cFitnessMachineControlPointUUID, response])    
+        server.update_value(     bc.sFitnessMachineUUID, bc.cTreadmillDataUUID    )  
         await asyncio.sleep(1)
     await server.stop()
 
