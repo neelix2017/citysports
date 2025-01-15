@@ -77,16 +77,25 @@ def getIntValue(bArr, i, i2):
 
         return i3/2560
 
+def createCommand(speed):
+    if (speed=='start'): return CitySports_codes['start']+check_xor( CitySports_codes['start'])
+    if (speed=='stop') : return CitySports_codes['stop']+check_xor( CitySports_codes['stop'])
+    try:
+        if (speed==float(speed)):
+            speedup= CitySports_codes['changeSpeed']+("%0.2X" % int(speed*10)).lower()
+            speedup= speedup + check_xor(speedup)
+            return speedup
+    finally:
+        return None
+
 async def notify_(address,  debug=True):
     global queue
     result = ""
     start = time.time()
     async with BleakClient(address, timeout  = 10) as client:
         await client.start_notify("ffeeddcc-bbaa-9988-7766-554433221102", notification_handler) 
-        #start treadmill
-        #await client.write_gatt_char("ffeeddcc-bbaa-9988-7766-554433221101",  bytearray(b'\xa1\x03\x01\x01\xa2'), response=False)
-        #stop treadmill
-        #await client.write_gatt_char("ffeeddcc-bbaa-9988-7766-554433221101",  bytearray(b'\xa1\x03\x01\x05\xa6'), response=False)
+        queue.append(createCommand("start"))
+        queue.append(createCommand(1.2))
         if len(queue) > 0:
             logger.info(queue)
             await client.write_gatt_char("ffeeddcc-bbaa-9988-7766-554433221101",  bytearray(queue[0]), response=False)
@@ -202,6 +211,21 @@ async def repeater(): # Here
     loop.create_task(notify_("84:C2:E4:54:E0:40")) # Here
     await loop.create_task(run(loop)) # "await" is needed
 
+def createTCX(session_data):
+    import TCXexport
+    tcx = TCXexport.clsTcxExport()
+    tcx.Start()   
+    now = datetime.datetime.utcnow()
+    j = len (session_data)
+    for line in session_data:
+        tcx.Trackpoint(Time = now - datetime.timedelta(0,j), HeartRate=line[3], Cadence=line[2], Watts=line[1], SpeedKmh= line[4])
+        j -= 1
+    tcx.Stop()
+    
 loop = asyncio.new_event_loop()
 asyncio.set_event_loop(loop)
-loop.run_until_complete(repeater()) 
+try:
+    loop.run_until_complete(repeater()) 
+except KeyboardInterrupt: 
+    print('End')
+    #createTCX(session_data)
