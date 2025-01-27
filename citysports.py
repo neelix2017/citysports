@@ -228,45 +228,19 @@ def createTCX(session_data):
         tcx.Trackpoint(Time = now - datetime.timedelta(0,j), HeartRate=line[3], Cadence=line[2], Watts=line[1], SpeedKmh= line[4])
         j -= 1
     tcx.Stop()
-
-_lasttime=0
-def createTime(_str):
-    global _lasttime
- 
-    first = _str[0]
-    last  = _str[-1]
-    t = int( _str.translate({ord(i): None for i in 'hms+-'}) )
-
-    if (last == 's'):
-        t = t
-    if (last == 'm'):
-        t = t * 60
-    if (last == 'h'):
-        t = t * 3600 
-    if (first == '+'):
-        t=_lasttime+t
-    _lasttime = t
-    return (t)
     
-def createSpeed(_str):
-    return float(_str)
     
-def load_workout(name):
-    import xml.etree.ElementTree as ET
-    tree = ET.parse(name)
-    root = tree.getroot()
-    queue.append([ 5, "start" ])
-    for event in root.findall('.//timeEvent'):
-        queue.append( [ createTime(event.attrib['time'])+5, createSpeed(event.find('.//action').attrib["value"]) ] )
-    queue.append([ queue[-1][0]+60, "stop" ])
     
 if __name__ == "__main__":    
-
-    load_workout(sys.argv[1]) if len(sys.argv) > 1 else queue.append([ 5, "start" ])
-
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-      
+
+
+    #queue.append([ 5, "start" ])
+    #queue.append([10, 1.5     ])
+    #queue.append([20, "stop"  ])
+        
+        
     try:
         loop.run_until_complete(repeater()) 
     except KeyboardInterrupt: 
