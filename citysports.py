@@ -215,8 +215,15 @@ async def run(loop):
 
 async def repeater(): # Here
     loop = asyncio.get_running_loop()
-    loop.create_task(notify_("84:C2:E4:54:E0:40")) # Here
-    await loop.create_task(run(loop)) # "await" is needed
+    treadmill_mac = "84:C2:E4:54:E0:40"
+    tasks = [
+        loop.create_task(notify_(treadmill_mac)),
+        loop.create_task(run(loop))
+    ]
+    try:
+        await asyncio.gather(*tasks)
+    except asyncio.CancelledError:
+        pass
 
 def createTCX(session_data):
     import TCXexport
